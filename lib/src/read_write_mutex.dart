@@ -1,5 +1,3 @@
-part of mutex;
-
 /// Represents a request for a lock.
 ///
 /// This is instantiated for each acquire and, if necessary, it is added
@@ -89,6 +87,16 @@ class ReadWriteMutex {
   ///
   Future acquireWrite() => _acquire(false);
 
+  /// Upgrade an existing read lock to write lock
+  ///
+  /// Returns a future that will be completed when the lock has been upgraded.
+  ///
+  Future upgradeToWriteLock() {
+    final newLock = _acquire(false, priority: true);
+    release();
+    return newLock;
+  }
+
   /// Release a lock.
   ///
   /// Release a lock that has been acquired.
@@ -120,10 +128,14 @@ class ReadWriteMutex {
 
   /// Internal acquire method.
   ///
-  Future _acquire(bool isRead) {
+  Future _acquire(bool isRead, {bool priority}) {
     final newJob = _ReadWriteMutexRequest(isRead: isRead);
     if (!_jobAcquired(newJob)) {
-      _waiting.add(newJob);
+      if (priority) {
+        _waiting.insert(0, newJob);
+      } else {
+        _waiting.add(newJob);
+      }
     }
     return newJob.completer.future;
   }
